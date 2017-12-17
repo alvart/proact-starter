@@ -1,0 +1,22 @@
+{
+  "ignore": [
+    "**/.*",
+    "bower_components",
+    "node_modules",
+    "test"
+  ],
+  "dependencies": {
+    "purescript-proact": "",
+    "purescript-pux": "^12.0.0",
+    "purescript-react-dom": "^4.1.0",
+    "purescript-signal": "^9.0.0"
+  },
+  "devDependencies": {
+    "purescript-enzyme": "^0.7.0",
+    "purescript-quickcheck": "^4.6.0",
+    "purescript-spec": "^2.0.0",
+    "purescript-spec-mocha": "^2.0.0",
+    "purescript-spec-quickcheck": "^2.0.0"
+  },
+  "name": "app"
+}
