@@ -49,7 +49,7 @@ The tests make use of the [Enzyme](https://github.com/airbnb/enzyme) library whi
 
 Once the browser is launched, Karma keeps watching the test and source code files for any changes and will re-run the tests automatically. Plus, when a test case fails, the error trace will point to the exact location in the purescript code where the exception was thrown.
 
-As a side note, **do NOT run `test`, `start` and/or `build` while any of these are already running.**
+As a side note, **do NOT run `test`, `start` and/or `build` if any of these are already running.**
 
 #### build
 

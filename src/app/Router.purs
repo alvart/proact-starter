@@ -56,7 +56,7 @@ instance showPath :: Show (Path)
 -- A component that subscribes to changes to the window's URL and sets the
 -- current path in the application's state accordingly. The mechanism requires
 -- an attempt to load a dummy HTML element that will be hidden from the user.
-router :: forall fx .  P.Component (RouterFx fx) State R.ReactElement
+router :: forall fx . P.Component (RouterFx fx) State R.ReactElement
 router =
   do
   dispatcher <- P.eventDispatcher

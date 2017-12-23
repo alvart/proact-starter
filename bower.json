@@ -6,7 +6,7 @@
     "test"
   ],
   "dependencies": {
-    "purescript-proact": "",
+    "purescript-proact": "^1.0.0",
     "purescript-pux": "^12.0.0",
     "purescript-react-dom": "^4.1.0",
     "purescript-signal": "^9.0.0"
