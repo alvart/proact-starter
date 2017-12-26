@@ -45,8 +45,7 @@ import React.DOM
   , tr'
   ) as R
 import React.DOM.Props (className, onChange, onKeyUp, placeholder, value) as R
-import Router (RouterFx)
-import Router (Path(..), router) as Router
+import Router (Path(..)) as Router
 import Task as Task
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -196,17 +195,16 @@ taskTable =
   resetIndex index task = pure $ task # Task._index .~ index
 
 -- | The to-do application.
-todo :: forall fx . P.Component (RouterFx fx) State R.ReactElement
+todo :: forall fx . P.Component fx State R.ReactElement
 todo =
   do
   state <- ask
-  routerView <- P.focus' _path Router.router
   filterMenuView <- P.focus' _filter Filter.filterMenu
   taskTableView <- taskTable
 
-  pure $ view state routerView filterMenuView taskTableView
+  pure $ view state filterMenuView taskTableView
   where
-  view state routerView filterMenuView taskTableView =
+  view state filterMenuView taskTableView =
     R.div
       [ R.className "container" ]
       [ R.h1' [ R.text "To-do App" ]
@@ -215,7 +213,6 @@ todo =
       , R.br' [ ]
       , taskTableView
       , R.p' [ R.text $ totalCompleted <> "/" <> total <> " tasks completed." ]
-      , routerView
       ]
     where
     tasks = state ^. _tasks

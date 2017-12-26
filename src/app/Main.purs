@@ -6,42 +6,45 @@ module Main
 where
 
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
 import Data.Maybe (fromJust)
 import DOM (DOM)
 import DOM.HTML (window) as D
 import DOM.HTML.Window (document) as D
-import DOM.HTML.Types (htmlDocumentToParentNode) as D
+import DOM.HTML.Types (HISTORY, htmlDocumentToParentNode) as D
 import DOM.Node.ParentNode (QuerySelector(..), querySelector) as D
 import Partial.Unsafe (unsafePartial)
 import Prelude
 import Proact as P
-import React
-  ( ReactProps
-  , ReactRefs
-  , ReactState
-  , ReadOnly
-  , ReadWrite
-  , createClass
-  , createFactory
-  )
-  as R
+import Pux.DOM.History (sampleURL)
+import React (createClass, createFactory) as R
 import ReactDOM (render) as R
-import Router (RouterFx)
-import Todo (mempty', todo) as Todo
+import Router (RouterFx, routerHandle) as Router
+import Signal (runSignal)
+import Signal.Channel (CHANNEL)
+import Todo (_path, mempty', todo) as Todo
 
-type ReactFx =
-  ( dom :: DOM
-  , props :: R.ReactProps
-  , refs :: R.ReactRefs R.ReadOnly
-  , state :: R.ReactState R.ReadWrite
-  )
+type ReactContext =
+  P.ReactContext
+    (Router.RouterFx (channel :: CHANNEL, dom :: DOM, history :: D.HISTORY))
 
-main :: Eff (RouterFx ReactFx) Unit
+main :: Eff ReactContext Unit
 main =
   unsafePartial
     do
-    let spec = P.spec Todo.todo Todo.mempty'
     let element = flip R.createFactory { } $ R.createClass spec
     rDocument <- map D.htmlDocumentToParentNode $ D.window >>= D.document
     rApp <- fromJust <$> D.querySelector (D.QuerySelector "#app") rDocument
     void $ R.render element rApp
+  where
+  spec =
+    (P.spec Todo.todo Todo.mempty') { componentDidMount = registerUrlSignal }
+
+  registerUrlSignal this =
+    do
+    urlSignal <- D.window >>= sampleURL
+    liftEff $ runSignal $ map routeHandler urlSignal
+    where
+    routeHandler = P.eventDispatcher' this' Router.routerHandle
+
+    this' = P.focusThis Todo._path $ P.ReactThis this
