@@ -16,6 +16,7 @@ import DOM.Node.ParentNode (QuerySelector(..), querySelector) as D
 import Partial.Unsafe (unsafePartial)
 import Prelude
 import Proact as P
+import ProactPlus (withEvent)
 import Pux.DOM.History (sampleURL)
 import React (createClass, createFactory) as R
 import ReactDOM (render) as R
@@ -24,11 +25,11 @@ import Signal (runSignal)
 import Signal.Channel (CHANNEL)
 import Todo (_path, mempty', todo) as Todo
 
-type ReactContext =
-  P.ReactContext
+type ReactFx =
+  P.EventFx
     (Router.RouterFx (channel :: CHANNEL, dom :: DOM, history :: D.HISTORY))
 
-main :: Eff ReactContext Unit
+main :: Eff ReactFx Unit
 main =
   unsafePartial
     do
@@ -45,6 +46,8 @@ main =
     urlSignal <- D.window >>= sampleURL
     liftEff $ runSignal $ map routeHandler urlSignal
     where
-    routeHandler = P.eventDispatcher' this' Router.routerHandle
+    dispatcher = withEvent $ P.dispatcher' this'
+
+    routeHandler = dispatcher Router.routerHandle
 
     this' = P.focusThis Todo._path $ P.ReactThis this

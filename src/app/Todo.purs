@@ -14,21 +14,19 @@ module Todo
 )
 where
 
-import Control.Monad.Reader (ask, asks)
+import Control.Monad.Reader (ask)
 import Data.Array ((:), deleteAt, filter, length, singleton, snoc)
-import Data.Identity (Identity)
-import Data.Lens (Lens', (%=), (.=), (.~), (^.), lens, traversed)
+import Data.Lens (Lens', (%=), (.=), (.~), (^.), filtered, lens)
+import Data.Lens.Indexed (itraversed)
 import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Maybe (fromJust)
-import Data.Monoid (mempty)
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype)
 import Data.Profunctor (lmap)
-import Data.TraversableWithIndex (traverseWithIndex)
 import FilterMenu (Filter(..), filterMenu) as Filter
 import Partial.Unsafe (unsafePartial)
 import Prelude
 import Proact as P
-import ProactPlus (ReactHandler, (..), use')
+import ProactPlus ((..), use', withEvent)
 import React (ReactElement) as R
 import React.DOM
   ( br'
@@ -58,14 +56,14 @@ newtype State =
     , tasks :: Array Task.State
     }
 
--- State :: NewType
+-- State :: Newtype
 derive instance newtypeState :: Newtype (State) _
 
 -- | Gets or sets the task filter.
 _filter :: Lens' State Filter.Filter
 _filter = _Newtype .. lens _.filter (_ { filter = _ })
 
--- | Gets or sets the current path.
+-- | Gets or sets the path of the application.
 _path :: Lens' State Router.Path
 _path = _Newtype .. lens _.path (_ { path = _ })
 
@@ -77,19 +75,6 @@ _taskDescription =
 -- | Gets or sets the list of tasks.
 _tasks :: Lens' State (Array Task.State)
 _tasks = _Newtype .. lens _.tasks (_ { tasks = _ })
-
--- A task to which a filter has been applied.
-filteredTask
-  :: forall fx
-   . (Task.State -> Boolean)
-  -> ReactHandler fx Int
-  -> P.Component fx Task.State (Array R.ReactElement)
-filteredTask filter' onDelete =
-  do
-  visible <- asks filter'
-  if visible
-    then singleton <$> Task.task onDelete
-    else pure [ ]
 
 -- | The initial state of the component.
 mempty' :: State
@@ -106,7 +91,7 @@ taskBox :: forall fx . P.Component fx State R.ReactElement
 taskBox =
   do
   state <- ask
-  dispatcher <- P.eventDispatcher
+  dispatcher <- withEvent <$> P.dispatcher
 
   pure $ view dispatcher state
   where
@@ -126,21 +111,18 @@ taskBox =
           $ lmap fromInputEvent
           $ dispatcher onTextChanged
       ]
-      [ ]
+      []
     where
     fromInputEvent event =
       { keyCode : (unsafeCoerce event).keyCode
       , text : (unsafeCoerce event).target.value
       }
 
-    newTask index text = (Task._index .~ index) .. (Task._description .~ text)
+    newTask text = Task._description .~ text
 
     onNewTaskEnter event =
       if event.keyCode == 13 && event.text /= ""
-      then
-        do
-        let index = length $ state ^. _tasks
-        _tasks %= flip snoc (newTask index event.text mempty)
+      then _tasks %= flip snoc (newTask event.text Task.mempty')
       else if event.keyCode == 27
       then _taskDescription .= ""
       else pure unit
@@ -152,47 +134,38 @@ taskTable :: forall fx . P.Component fx State R.ReactElement
 taskTable =
   do
   filter' <- use' _filter
-  dispatcher <- P.eventDispatcher
+  dispatcher <- withEvent <$> P.dispatcher
 
   taskBoxView <- taskBox
   tasksView <-
-    P.focus (_tasks .. traversed)
-      $ filteredTask (taskFilter filter')
+    P.focus' _tasks
+      $ P.iFocus (itraversed .. filtered (taskFilter filter'))
+      $ map singleton
+      $ Task.task
       $ dispatcher onDelete
 
   pure $ view taskBoxView tasksView
   where
   view taskBoxView tasksView =
     R.table
-      [ R.className "table table-striped" ]
+      [R.className "table table-striped"]
       [
         R.thead'
           [
             R.tr'
-              [ R.th [ R.className "col-md-1" ] [ ]
-              , R.th [ R.className "col-md-10"] [ R.text "Description" ]
-              , R.th [ R.className "col-md-1"] [ ]
+              [ R.th [R.className "col-md-1"] []
+              , R.th [R.className "col-md-10"] [R.text "Description"]
+              , R.th [R.className "col-md-1"] []
               ]
           ]
-      ,
-        R.tbody'
-          $ R.tr' [ R.td' [ ], R.td' [ taskBoxView ], R.td' [ ] ] : tasksView
+      , R.tbody' $ R.tr' [R.td' [], R.td' [taskBoxView], R.td' []] : tasksView
       ]
 
   taskFilter Filter.All _ = true
   taskFilter Filter.Completed task = task ^. Task._completed
   taskFilter Filter.Active task = not $ task ^. Task._completed
 
-  onDelete index = _tasks %= deleteTaskAt index
-
-  deleteTaskAt index array =
-    (unwrap <<< unsafePartial)
-      do
-      let array' = fromJust $ deleteAt index array
-      traverseWithIndex resetIndex array'
-
-  resetIndex :: Int -> Task.State -> Identity Task.State
-  resetIndex index task = pure $ task # Task._index .~ index
+  onDelete index = unsafePartial $ _tasks %= fromJust .. deleteAt index
 
 -- | The to-do application.
 todo :: forall fx . P.Component fx State R.ReactElement

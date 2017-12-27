@@ -14,7 +14,7 @@ import Control.Monad.Reader (ask)
 import Data.Lens ((.=))
 import Prelude
 import Proact as P
-import ProactPlus (_this)
+import ProactPlus (_this, withEvent)
 import React (ReactElement) as R
 import React.DOM (button, div, text) as R
 import React.DOM.Props (className, onClick) as R
@@ -42,7 +42,7 @@ filterMenu :: forall fx . P.Component fx State R.ReactElement
 filterMenu =
   do
   state <- ask
-  dispatcher <- P.eventDispatcher
+  dispatcher <- withEvent <$> P.dispatcher
 
   pure $ view dispatcher state
   where
