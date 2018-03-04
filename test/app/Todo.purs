@@ -11,5 +11,5 @@ import Prelude
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (fail)
 
-spec :: forall fx . Spec (enzyme :: ENZYME | fx) Unit
+spec :: forall e . Spec (enzyme :: ENZYME | e) Unit
 spec = it "should fail" $ fail "TODO: Write tests for TODO"

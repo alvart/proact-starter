@@ -4,19 +4,17 @@
 -}
 
 module Task
-( State(..)
+( State
 , _completed
 , _description
-, mempty'
+, empty
 , task
 )
 where
 
 import Control.Monad.Reader (ask)
 import Data.Array (singleton)
-import Data.Lens (Lens', (.=), (^.), lens)
-import Data.Lens.Iso.Newtype (_Newtype)
-import Data.Newtype (class Newtype)
+import Data.Lens (Lens', (.=), lens)
 import Data.Profunctor (lmap)
 import Data.Tuple (Tuple(..))
 import React (ReactElement) as R
@@ -24,44 +22,37 @@ import React.DOM (a, input, td', text, tr') as R
 import React.DOM.Props
   (_type, checked, className, onChange, onClick, title) as R
 import Prelude
-import Proact as P
-import ProactPlus (ReactHandler, (..), withEvent)
+import Proact.React (dispatcher) as P
+import Todo.Proact (EventDispatcher, IndexedComponent, (..))
 import Unsafe.Coerce (unsafeCoerce)
 
--- | The state of a task component.
-newtype State =
-  State
-    { completed :: Boolean
-    , description :: String
-    }
-
--- State :: Newtype
-derive instance newtypeState :: Newtype (State) _
+-- | A type synonym for the state of a task component.
+type State =
+  { completed :: Boolean
+  , description :: String
+  }
 
 -- | Gets or sets whether the task completed or not.
 _completed :: Lens' State Boolean
-_completed = _Newtype .. lens _.completed (_ { completed = _ })
+_completed = lens _.completed (_ { completed = _ })
 
 -- | Gets or sets the task description.
 _description :: Lens' State String
-_description = _Newtype .. lens _.description (_ { description = _ })
+_description = lens _.description (_ { description = _ })
 
 -- | The initial state of the component.
-mempty' :: State
-mempty' =
-  State
-    { completed : false
-    , description : ""
-    }
+empty :: State
+empty =
+  { completed : false
+  , description : ""
+  }
 
 -- | The task component.
-task
-  :: forall fx index
-   . ReactHandler fx index -> P.IndexedComponent fx index State R.ReactElement
+task :: EventDispatcher Int Unit -> IndexedComponent Int State R.ReactElement
 task onDelete =
   do
   Tuple index state <- ask
-  dispatcher <- withEvent <$> P.dispatcher
+  dispatcher <- map (..) P.dispatcher
 
   pure $ view dispatcher index state
   where
@@ -71,12 +62,12 @@ task onDelete =
         R.input
           [ R._type "checkbox"
           , R.className "checkbox"
-          , R.checked $ state ^. _completed
+          , R.checked state.completed
           , R.title "Mark as completed"
           , R.onChange $ lmap fromInputEvent $ dispatcher onCompleted
           ]
           []
-      , R.text $ state ^. _description
+      , R.text state.description
       ,
         R.a
           [ R.className "btn btn-danger pull-right"

@@ -15,20 +15,26 @@ import Enzyme.Shallow (shallow)
 import Enzyme.ShallowWrapper (childAt, hasClass, simulate, text)
 import FilterMenu (Filter(..), filterMenu) as Filter
 import Prelude
-import Proact as P
-import React as R
+import React (createClass, createFactory) as R
+import Test.Program (TodoF(..))
+import Test.Program (mock, spec) as P
 import Test.Spec (Spec, it)
 import Test.Spec.Assertions (shouldEqual)
+import Todo.Program (TodoF(..)) as App
 
-spec :: forall fx . Spec (enzyme :: ENZYME | fx) Unit
+spec :: forall e . Spec (enzyme :: ENZYME | e) Unit
 spec = traverseWithIndex_ testFilterTuple $ lift2 Tuple filters filters
   where
+  mockF :: App.TodoF ~> TodoF
+  mockF (App.SetDocumentTitle _ a) = TodoF (pure a)
+
   loadMenu state =
     liftEff
       $ shallow
       $ flip R.createFactory { }
       $ R.createClass
-      $ P.spec Filter.filterMenu state
+      $ P.spec state
+      $ P.mock mockF Filter.filterMenu
 
   filters = [ Filter.All, Filter.Active, Filter.Completed ]
 

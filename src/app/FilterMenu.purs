@@ -5,7 +5,6 @@
 
 module FilterMenu
 ( Filter(..)
-, State
 , filterMenu
 )
 where
@@ -13,11 +12,11 @@ where
 import Control.Monad.Reader (ask)
 import Data.Lens ((.=))
 import Prelude
-import Proact as P
-import ProactPlus (_this, withEvent)
+import Proact.React (dispatcher) as P
 import React (ReactElement) as R
 import React.DOM (button, div, text) as R
 import React.DOM.Props (className, onClick) as R
+import Todo.Proact (Component, (..), _this)
 
 -- | The three filters which can be applied to the list of tasks.
 data Filter =
@@ -38,11 +37,11 @@ instance showFilter :: Show (Filter)
   show Completed = "Completed"
 
 -- | The top-bar to select filtering options for the tasks.
-filterMenu :: forall fx . P.Component fx State R.ReactElement
+filterMenu :: Component State R.ReactElement
 filterMenu =
   do
   state <- ask
-  dispatcher <- withEvent <$> P.dispatcher
+  dispatcher <- map (..) P.dispatcher
 
   pure $ view dispatcher state
   where

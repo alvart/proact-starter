@@ -9,24 +9,21 @@ module Todo
 , _path
 , _taskDescription
 , _tasks
-, mempty'
+, empty
 , todo
 )
 where
 
 import Control.Monad.Reader (ask)
 import Data.Array ((:), deleteAt, filter, length, singleton, snoc)
-import Data.Lens (Lens', (%=), (.=), (.~), (^.), filtered, lens)
+import Data.Lens (Lens', (%=), (.=), (.~), filtered, lens)
 import Data.Lens.Indexed (itraversed)
-import Data.Lens.Iso.Newtype (_Newtype)
 import Data.Maybe (fromJust)
-import Data.Newtype (class Newtype)
 import Data.Profunctor (lmap)
 import FilterMenu (Filter(..), filterMenu) as Filter
 import Partial.Unsafe (unsafePartial)
+import Proact.React (dispatcher, focus', iFocus) as P
 import Prelude
-import Proact as P
-import ProactPlus ((..), use', withEvent)
 import React (ReactElement) as R
 import React.DOM
   ( br'
@@ -45,53 +42,48 @@ import React.DOM
 import React.DOM.Props (className, onChange, onKeyUp, placeholder, value) as R
 import Router (Path(..)) as Router
 import Task as Task
+import Todo.Proact (Component, (..), use')
 import Unsafe.Coerce (unsafeCoerce)
 
--- | The state of the to-do application.
-newtype State =
-  State
-    { filter :: Filter.Filter
-    , path :: Router.Path
-    , taskDescription :: String
-    , tasks :: Array Task.State
-    }
-
--- State :: Newtype
-derive instance newtypeState :: Newtype (State) _
+-- | A type synonym for the state of the to-do application.
+type State =
+  { filter :: Filter.Filter
+  , path :: Router.Path
+  , taskDescription :: String
+  , tasks :: Array Task.State
+  }
 
 -- | Gets or sets the task filter.
 _filter :: Lens' State Filter.Filter
-_filter = _Newtype .. lens _.filter (_ { filter = _ })
+_filter = lens _.filter (_ { filter = _ })
 
 -- | Gets or sets the path of the application.
 _path :: Lens' State Router.Path
-_path = _Newtype .. lens _.path (_ { path = _ })
+_path = lens _.path (_ { path = _ })
 
 -- | Gets or sets the description of the new task to be added.
 _taskDescription :: Lens' State String
-_taskDescription =
-  _Newtype .. lens _.taskDescription (_ { taskDescription = _ })
+_taskDescription = lens _.taskDescription (_ { taskDescription = _ })
 
 -- | Gets or sets the list of tasks.
 _tasks :: Lens' State (Array Task.State)
-_tasks = _Newtype .. lens _.tasks (_ { tasks = _ })
+_tasks = lens _.tasks (_ { tasks = _ })
 
 -- | The initial state of the component.
-mempty' :: State
-mempty' =
-  State
-    { filter : Filter.All
-    , path : Router.Home
-    , taskDescription : ""
-    , tasks : [ ]
-    }
+empty :: State
+empty =
+  { filter : Filter.All
+  , path : Router.Home
+  , taskDescription : ""
+  , tasks : [ ]
+  }
 
 -- A task to which a filter has been applied.
-taskBox :: forall fx . P.Component fx State R.ReactElement
+taskBox :: Component State R.ReactElement
 taskBox =
   do
   state <- ask
-  dispatcher <- withEvent <$> P.dispatcher
+  dispatcher <- map (..) P.dispatcher
 
   pure $ view dispatcher state
   where
@@ -99,7 +91,7 @@ taskBox =
     R.input
       [ R.className "form-control"
       , R.placeholder "Create a new task"
-      , R.value $ state ^. _taskDescription
+      , R.value state.taskDescription
       ,
         R.onKeyUp
           $ unsafeCoerce
@@ -122,7 +114,7 @@ taskBox =
 
     onNewTaskEnter event =
       if event.keyCode == 13 && event.text /= ""
-      then _tasks %= flip snoc (newTask event.text Task.mempty')
+      then _tasks %= flip snoc (newTask event.text Task.empty)
       else if event.keyCode == 27
       then _taskDescription .= ""
       else pure unit
@@ -130,11 +122,11 @@ taskBox =
     onTextChanged event = _taskDescription .= event.text
 
 -- The table showing the filtered list of tasks.
-taskTable :: forall fx . P.Component fx State R.ReactElement
+taskTable :: Component State R.ReactElement
 taskTable =
   do
   filter' <- use' _filter
-  dispatcher <- withEvent <$> P.dispatcher
+  dispatcher <- map (..) P.dispatcher
 
   taskBoxView <- taskBox
   tasksView <-
@@ -162,13 +154,13 @@ taskTable =
       ]
 
   taskFilter Filter.All _ = true
-  taskFilter Filter.Completed task = task ^. Task._completed
-  taskFilter Filter.Active task = not $ task ^. Task._completed
+  taskFilter Filter.Completed task = task.completed
+  taskFilter Filter.Active task = not $ task.completed
 
   onDelete index = unsafePartial $ _tasks %= fromJust .. deleteAt index
 
 -- | The to-do application.
-todo :: forall fx . P.Component fx State R.ReactElement
+todo :: Component State R.ReactElement
 todo =
   do
   state <- ask
@@ -188,8 +180,6 @@ todo =
       , R.p' [ R.text $ totalCompleted <> "/" <> total <> " tasks completed." ]
       ]
     where
-    tasks = state ^. _tasks
+    total = show $ length state.tasks
 
-    total = show $ length tasks
-
-    totalCompleted = show $ length $ filter (_ ^. Task._completed) tasks
+    totalCompleted = show $ length $ filter _.completed state.tasks
