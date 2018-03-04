@@ -9,8 +9,8 @@
     "purescript-io": "^5.0.0",
     "purescript-proact": "^3.0.0",
     "purescript-pux": "^12.0.0",
-    "purescript-profunctor-lenses": "^3.0.0",
-    "purescript-react": "^5.0.0",
+    "purescript-profunctor-lenses": "^3.8.0",
+    "purescript-react": "^5.1.0",
     "purescript-react-dom": "^5.0.0",
     "purescript-signal": "^9.0.0"
   },
@@ -21,5 +21,8 @@
     "purescript-spec-mocha": "^2.0.0",
     "purescript-spec-quickcheck": "^2.0.0"
   },
-  "name": "app"
+  "name": "app",
+  "resolutions": {
+    "purescript-react": "^5.1.0"
+  }
 }
